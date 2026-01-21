@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - House Price Prediction</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <i class="fas fa-home header-icon"></i>
+                <h1>House Price Prediction System</h1>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="error-page">
+                <i class="fas fa-exclamation-triangle error-icon"></i>
+                <h2>Oops! Something went wrong</h2>
+                <p class="error-message">{{ error }}</p>
+                <a href="/" class="btn-primary">
+                    <i class="fas fa-home"></i> Go Back Home
+                </a>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2026 House Price Prediction System</p>
+        </footer>
+    </div>
+</body>
+</html>

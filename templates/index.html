@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>House Price Prediction System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <i class="fas fa-home header-icon"></i>
+                <h1>House Price Prediction System</h1>
+                <p class="subtitle">Powered by Machine Learning - Random Forest Regressor</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Error Message -->
+            {% if error %}
+            <div class="alert alert-error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+
+            <!-- Success/Prediction Result -->
+            {% if prediction and prediction.success %}
+            <div class="prediction-result">
+                <div class="result-header">
+                    <i class="fas fa-check-circle"></i>
+                    <h2>Prediction Result</h2>
+                </div>
+                
+                <div class="price-display">
+                    <div class="price-label">Estimated House Price</div>
+                    <div class="price-value">${{ "{:,.2f}".format(prediction.predicted_price) }}</div>
+                </div>
+
+                <div class="confidence-info">
+                    <div class="confidence-item">
+                        <span class="label">Price Range (95% Confidence):</span>
+                        <span class="value">${{ "{:,.2f}".format(prediction.lower_bound) }} - ${{ "{:,.2f}".format(prediction.upper_bound) }}</span>
+                    </div>
+                    <div class="confidence-item">
+                        <span class="label">Model Accuracy (R²):</span>
+                        <span class="value">{{ "{:.2%}".format(prediction.model_r2) }}</span>
+                    </div>
+                    <div class="confidence-item">
+                        <span class="label">Average Error (RMSE):</span>
+                        <span class="value">${{ "{:,.2f}".format(prediction.model_rmse) }}</span>
+                    </div>
+                </div>
+
+                <button class="btn-secondary" onclick="location.reload()">
+                    <i class="fas fa-redo"></i> New Prediction
+                </button>
+            </div>
+            {% endif %}
+
+            <!-- Input Form -->
+            <div class="form-container">
+                <div class="form-header">
+                    <i class="fas fa-edit"></i>
+                    <h2>Enter House Details</h2>
+                </div>
+
+                <form method="POST" action="/predict" class="prediction-form">
+                    <!-- Overall Quality -->
+                    <div class="form-group">
+                        <label for="overall_qual">
+                            <i class="fas fa-star"></i>
+                            Overall Quality
+                            <span class="tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltiptext">Rates the overall material and finish of the house (1-10, where 10 is excellent)</span>
+                            </span>
+                        </label>
+                        <input 
+                            type="number" 
+                            id="overall_qual" 
+                            name="overall_qual" 
+                            min="1" 
+                            max="10" 
+                            value="{{ form_data.overall_qual if form_data else '5' }}"
+                            required
+                            class="form-input">
+                        <small class="form-help">Range: 1 (Poor) to 10 (Excellent)</small>
+                    </div>
+
+                    <!-- Living Area -->
+                    <div class="form-group">
+                        <label for="gr_liv_area">
+                            <i class="fas fa-ruler-combined"></i>
+                            Living Area (sq ft)
+                            <span class="tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltiptext">Above grade (ground) living area in square feet</span>
+                            </span>
+                        </label>
+                        <input 
+                            type="number" 
+                            id="gr_liv_area" 
+                            name="gr_liv_area" 
+                            min="1" 
+                            step="1"
+                            value="{{ form_data.gr_liv_area if form_data else '1500' }}"
+                            required
+                            class="form-input">
+                        <small class="form-help">Typical range: 500 - 5000 sq ft</small>
+                    </div>
+
+                    <!-- Basement Area -->
+                    <div class="form-group">
+                        <label for="total_bsmt_sf">
+                            <i class="fas fa-layer-group"></i>
+                            Total Basement Area (sq ft)
+                            <span class="tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltiptext">Total square feet of basement area (enter 0 if no basement)</span>
+                            </span>
+                        </label>
+                        <input 
+                            type="number" 
+                            id="total_bsmt_sf" 
+                            name="total_bsmt_sf" 
+                            min="0" 
+                            step="1"
+                            value="{{ form_data.total_bsmt_sf if form_data else '0' }}"
+                            required
+                            class="form-input">
+                        <small class="form-help">Enter 0 if no basement</small>
+                    </div>
+
+                    <!-- Garage Cars -->
+                    <div class="form-group">
+                        <label for="garage_cars">
+                            <i class="fas fa-car"></i>
+                            Garage Capacity (cars)
+                            <span class="tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltiptext">Size of garage in car capacity (0-4)</span>
+                            </span>
+                        </label>
+                        <select 
+                            id="garage_cars" 
+                            name="garage_cars" 
+                            required
+                            class="form-input">
+                            <option value="0" {% if form_data and form_data.garage_cars == '0' %}selected{% endif %}>0 (No Garage)</option>
+                            <option value="1" {% if form_data and form_data.garage_cars == '1' %}selected{% elif not form_data %}selected{% endif %}>1 Car</option>
+                            <option value="2" {% if form_data and form_data.garage_cars == '2' %}selected{% endif %}>2 Cars</option>
+                            <option value="3" {% if form_data and form_data.garage_cars == '3' %}selected{% endif %}>3 Cars</option>
+                            <option value="4" {% if form_data and form_data.garage_cars == '4' %}selected{% endif %}>4 Cars</option>
+                        </select>
+                    </div>
+
+                    <!-- Year Built -->
+                    <div class="form-group">
+                        <label for="year_built">
+                            <i class="fas fa-calendar-alt"></i>
+                            Year Built
+                            <span class="tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltiptext">Original construction year</span>
+                            </span>
+                        </label>
+                        <input 
+                            type="number" 
+                            id="year_built" 
+                            name="year_built" 
+                            min="1800" 
+                            max="2026" 
+                            value="{{ form_data.year_built if form_data else '2000' }}"
+                            required
+                            class="form-input">
+                        <small class="form-help">Enter year (e.g., 2000)</small>
+                    </div>
+
+                    <!-- Neighborhood -->
+                    <div class="form-group">
+                        <label for="neighborhood">
+                            <i class="fas fa-map-marker-alt"></i>
+                            Neighborhood
+                            <span class="tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltiptext">Physical location within city limits</span>
+                            </span>
+                        </label>
+                        <select 
+                            id="neighborhood" 
+                            name="neighborhood" 
+                            required
+                            class="form-input">
+                            <option value="">-- Select Neighborhood --</option>
+                            {% for neighborhood in neighborhoods %}
+                            <option value="{{ neighborhood }}" 
+                                {% if form_data and form_data.neighborhood == neighborhood %}selected{% endif %}>
+                                {{ neighborhood }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-calculator"></i>
+                        Predict House Price
+                    </button>
+                </form>
+            </div>
+
+            <!-- Model Information -->
+            <div class="info-section">
+                <h3><i class="fas fa-info-circle"></i> Model Information</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <strong>Algorithm:</strong>
+                        <span>Random Forest Regressor</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Features Used:</strong>
+                        <span>6 key features</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Dataset:</strong>
+                        <span>Ames Housing Dataset</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Persistence:</strong>
+                        <span>Joblib</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2026 House Price Prediction System | Built with Flask & Machine Learning</p>
+            <p class="footer-links">
+                <a href="/api/model-info" target="_blank"><i class="fas fa-database"></i> API Info</a>
+                <a href="/health" target="_blank"><i class="fas fa-heartbeat"></i> Health Check</a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Form validation and UX enhancements
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('.prediction-form');
+            
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    const submitBtn = form.querySelector('.btn-primary');
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculating...';
+                    submitBtn.disabled = true;
+                });
+            }
+
+            // Smooth scroll to result
+            const result = document.querySelector('.prediction-result');
+            if (result) {
+                result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            // Add animation to tooltips
+            const tooltips = document.querySelectorAll('.tooltip');
+            tooltips.forEach(tooltip => {
+                tooltip.addEventListener('mouseenter', function() {
+                    this.querySelector('.tooltiptext').style.visibility = 'visible';
+                    this.querySelector('.tooltiptext').style.opacity = '1';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
